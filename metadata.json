@@ -1,0 +1,6 @@
+{
+  "name": "HEXA",
+  "description": "HEXA — Personal Intelligence System for device telemetry, screen time, application usage, hardware monitoring, power intelligence, notifications, and task management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

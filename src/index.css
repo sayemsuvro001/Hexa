@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --hexa-bg-main: #030714;
+  --hexa-bg-secondary: #060c1b;
+  --hexa-bg-card: #0a1328;
+  --hexa-bg-inner: #0d1932;
+  --hexa-bg-navy: #050a17;
+  --hexa-cyan: #00dfff;
+  --hexa-blue: #1677e8;
+  --hexa-purple: #8b4dce;
+  --hexa-magenta: #b93dbd;
+  --hexa-text-primary: #eaf4ff;
+  --hexa-text-secondary: #8496b5;
+  --hexa-glow-opacity: 0.45;
+  --hexa-border-opacity: 0.85;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--hexa-bg-main);
+    color: var(--hexa-text-primary);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+.font-display {
+  font-family: 'Orbitron', sans-serif;
+}
+
+.font-mono-tech {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Signature NEXUS dark subtle grid */
+.hexa-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(0, 223, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 223, 255, 0.045) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+/* Ambient cyan/purple atmospheric glow */
+.hexa-ambient-glow {
+  background:
+    radial-gradient(circle at 12% 28%, rgba(0, 223, 255, 0.11), transparent 42%),
+    radial-gradient(circle at 88% 42%, rgba(139, 77, 206, 0.12), transparent 44%),
+    radial-gradient(circle at 50% 88%, rgba(22, 119, 232, 0.09), transparent 46%);
+}
+
+/* Chamfered octagon/card clip-paths */
+.chamfer-card {
+  clip-path: polygon(
+    14px 0%,
+    calc(100% - 14px) 0%,
+    100% 14px,
+    100% calc(100% - 14px),
+    calc(100% - 14px) 100%,
+    14px 100%,
+    0% calc(100% - 14px),
+    0% 14px
+  );
+}
+
+.chamfer-card-sm {
+  clip-path: polygon(
+    10px 0%,
+    calc(100% - 10px) 0%,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    0% calc(100% - 10px),
+    0% 10px
+  );
+}
+
+.hex-shape {
+  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #030714;
+}
+::-webkit-scrollbar-thumb {
+  background: #162647;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00dfff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
