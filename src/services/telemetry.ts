@@ -10,6 +10,7 @@ import {
 export interface HexaAndroidBridgeInterface {
   getDeviceRamInfo?: () => string;
   getStorageInfo?: () => string;
+  getCpuInfo?: () => string;
   getBatteryDetails?: () => string;
   getNextAlarmClock?: () => string;
   getUsageStatsToday?: () => string;
@@ -21,6 +22,8 @@ export interface HexaAndroidBridgeInterface {
   requestNotificationListenerPermission?: () => void;
   requestOverlayPermission?: () => void;
   openDefaultClockApp?: () => void;
+  showFloatingTaskOverlay?: (title: string, priority: string) => void;
+  hideFloatingTaskOverlay?: () => void;
 }
 
 declare global {
@@ -30,6 +33,54 @@ declare global {
 }
 
 export async function fetchHardwareTelemetry(): Promise<HardwareTelemetry | null> {
+  const bridge = window.HexaAndroidBridge;
+  if (bridge?.getDeviceRamInfo && bridge?.getStorageInfo && bridge?.getCpuInfo) {
+    try {
+      const ram = JSON.parse(bridge.getDeviceRamInfo());
+      const storage = JSON.parse(bridge.getStorageInfo());
+      const cpu = JSON.parse(bridge.getCpuInfo());
+      return {
+        timestamp: Date.now(),
+        ram: {
+          totalBytes: ram.totalBytes ?? 0,
+          usedBytes: ram.usedBytes ?? 0,
+          availableBytes: ram.availableBytes ?? 0,
+          usagePercent: ram.usagePercent ?? 0,
+          source: 'ActivityManager.MemoryInfo',
+        },
+        storage: {
+          totalBytes: storage.totalBytes ?? 0,
+          usedBytes: storage.usedBytes ?? 0,
+          availableBytes: storage.availableBytes ?? 0,
+          usagePercent: storage.usagePercent ?? 0,
+          mountPoint: '/data',
+          source: 'android.os.StatFs',
+        },
+        cpu: {
+          usagePercent: typeof cpu.usagePercent === 'number' ? cpu.usagePercent : null,
+          cores: cpu.cores ?? navigator.hardwareConcurrency ?? 1,
+          architecture: cpu.architecture ?? 'arm64',
+          model: cpu.model ?? 'Android SoC',
+          speedMhz: null,
+          loadAverage: {
+            oneMin: cpu.loadOneMin ?? 0,
+            fiveMin: 0,
+            fifteenMin: 0,
+          },
+          source: '/proc/stat + Build',
+        },
+        system: {
+          platform: 'android',
+          release: cpu.androidVersion ?? 'Android',
+          uptimeSeconds: cpu.uptimeSeconds ?? 0,
+          hostname: cpu.deviceModel ?? 'Android Device',
+        },
+      };
+    } catch {
+      // fall through
+    }
+  }
+
   try {
     const res = await fetch('/api/hardware', { cache: 'no-store' });
     if (!res.ok) return null;
@@ -55,23 +106,28 @@ export async function subscribeBatteryMonitor(
 ): Promise<() => void> {
   // Check Android native bridge first
   if (window.HexaAndroidBridge?.getBatteryDetails) {
-    try {
-      const parsed = JSON.parse(window.HexaAndroidBridge.getBatteryDetails());
-      onUpdate({
-        supported: true,
-        levelPercent: typeof parsed.level === 'number' ? parsed.level : null,
-        isCharging: typeof parsed.isCharging === 'boolean' ? parsed.isCharging : null,
-        chargingTimeSec: null,
-        dischargingTimeSec: null,
-        temperatureCelsius: parsed.temperatureCelsius ?? null,
-        health: parsed.health ?? null,
-        technology: parsed.technology ?? null,
-        source: 'android-bridge',
-        lastUpdated: Date.now(),
-      });
-    } catch {
-      // fall through to browser Battery API
-    }
+    const readBridgeBattery = () => {
+      try {
+        const parsed = JSON.parse(window.HexaAndroidBridge!.getBatteryDetails!());
+        onUpdate({
+          supported: true,
+          levelPercent: typeof parsed.level === 'number' ? parsed.level : null,
+          isCharging: typeof parsed.isCharging === 'boolean' ? parsed.isCharging : null,
+          chargingTimeSec: null,
+          dischargingTimeSec: null,
+          temperatureCelsius: parsed.temperatureCelsius ?? null,
+          health: parsed.health ?? null,
+          technology: parsed.technology ?? null,
+          source: 'android-bridge',
+          lastUpdated: Date.now(),
+        });
+      } catch {
+        // ignore
+      }
+    };
+    readBridgeBattery();
+    const id = window.setInterval(readBridgeBattery, 5000);
+    return () => window.clearInterval(id);
   }
 
   const nav = navigator as NavigatorWithBattery;

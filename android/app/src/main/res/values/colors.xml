@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="hexa_bg_main">#030714</color>
+    <color name="hexa_bg_card">#0A1328</color>
+    <color name="hexa_cyan">#00DFFF</color>
+    <color name="hexa_purple">#8B4DCE</color>
+</resources>

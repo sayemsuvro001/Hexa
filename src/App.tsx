@@ -154,6 +154,67 @@ export default function App() {
     };
   }, []);
 
+  // 1b. Android Native Bridge Sync (Notifications, UsageStats, AlarmManager, System Overlay)
+  useEffect(() => {
+    const bridge = window.HexaAndroidBridge;
+    if (!bridge) return;
+
+    const syncBridgeData = async () => {
+      const todayKey = getDateKey();
+      try {
+        if (bridge.getRecentNotifications && settingsRef.current.monitoring.notificationMonitoringEnabled) {
+          const rawNotifs = JSON.parse(bridge.getRecentNotifications()) as NotificationRecord[];
+          if (Array.isArray(rawNotifs) && rawNotifs.length > 0) {
+            setNotifications((prev) => {
+              const map = new Map(prev.map((n) => [n.id, n]));
+              for (const rn of rawNotifs) {
+                if (!map.has(rn.id)) {
+                  map.set(rn.id, rn);
+                  HexaStorage.saveNotification(rn);
+                }
+              }
+              return Array.from(map.values()).sort((a, b) => b.receivedAt - a.receivedAt);
+            });
+          }
+        }
+        if (bridge.getUsageStatsToday && settingsRef.current.monitoring.appUsageEnabled) {
+          const rawApps = JSON.parse(bridge.getUsageStatsToday()) as AppUsageRecord[];
+          if (Array.isArray(rawApps) && rawApps.length > 0) {
+            setAppUsageToday((prev) => {
+              const map = new Map(prev.map((a) => [a.packageName, a]));
+              for (const ra of rawApps) {
+                const existing = map.get(ra.packageName);
+                if (!existing || ra.totalDurationMs >= existing.totalDurationMs) {
+                  map.set(ra.packageName, ra);
+                  HexaStorage.saveAppUsageRecord(todayKey, ra);
+                }
+              }
+              return Array.from(map.values());
+            });
+          }
+        }
+      } catch {
+        // ignore bridge parse errors
+      }
+    };
+
+    syncBridgeData();
+    const id = window.setInterval(syncBridgeData, 8000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Sync native Android SYSTEM_ALERT_WINDOW overlay when floating popup setting changes
+  useEffect(() => {
+    const bridge = window.HexaAndroidBridge;
+    if (!bridge?.showFloatingTaskOverlay || !bridge?.hideFloatingTaskOverlay) return;
+    const pending = tasks.filter((t) => !t.completed);
+    if (settings.tasks.floatingPopupEnabled && pending.length > 0 && bridge.hasOverlayPermission?.()) {
+      bridge.showFloatingTaskOverlay(pending[0].title, pending[0].priority.toUpperCase());
+    } else {
+      bridge.hideFloatingTaskOverlay();
+    }
+  }, [settings.tasks.floatingPopupEnabled, tasks]);
+
   // 2. Real Hardware Polling (/api/hardware)
   useEffect(() => {
     let active = true;
