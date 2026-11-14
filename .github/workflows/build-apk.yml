@@ -24,7 +24,7 @@ jobs:
 
       - name: Install web dependencies & build bundle
         run: |
-          npm install
+          npm install --legacy-peer-deps
           npm run build
 
       - name: Sync built web assets to Android assets
@@ -42,6 +42,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK 35 components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -51,6 +54,7 @@ jobs:
         working-directory: android
         run: |
           gradle assembleDebug --no-daemon
+          rm -f hexa-release.keystore
           keytool -genkeypair -v -keystore hexa-release.keystore -alias hexa -keyalg RSA -keysize 2048 -validity 10000 -storepass hexapass123 -keypass hexapass123 -dname "CN=HEXA, OU=PersonalIntelligence, O=HEXA, L=Local, S=NA, C=US"
           gradle assembleRelease -Pandroid.injected.signing.store.file="$(pwd)/hexa-release.keystore" -Pandroid.injected.signing.store.password=hexapass123 -Pandroid.injected.signing.key.alias=hexa -Pandroid.injected.signing.key.password=hexapass123 --no-daemon
 
@@ -58,7 +62,12 @@ jobs:
         run: |
           mkdir -p release-apks
           cp android/app/build/outputs/apk/debug/app-debug.apk release-apks/HEXA-v1.0.${{ github.run_number }}-debug.apk
-          cp android/app/build/outputs/apk/release/app-release.apk release-apks/HEXA-v1.0.${{ github.run_number }}-release.apk
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk release-apks/HEXA-v1.0.${{ github.run_number }}-release.apk
+          elif [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release-unsigned.apk release-apks/HEXA-v1.0.${{ github.run_number }}-release-unsigned.apk
+          fi
+          ls -lh release-apks/
 
       - name: Upload APK Workflow Artifact
         uses: actions/upload-artifact@v4
